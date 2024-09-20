@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Congratulations Stephan! 🎉</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    let cellSize = 15; // Cells are slightly bigger
+    let rows;
+    let cols;
+    let grid = [];
+    let generation = 0;
+    const maxGenerations = 20; // 2 iterations per second * 10 seconds
+    const interval = 500; // 500ms per iteration
+    let animationInterval;
+    let fireworks = [];
+
+    // Patterns that move or oscillate
+    const movingPatterns = [
+      // Glider
+      [
+        [0, 1, 0],
+        [0, 0, 1],
+        [1, 1, 1]
+      ],
+      // Lightweight spaceship (LWSS)
+      [
+        [0, 1, 0, 0, 1],
+        [1, 0, 0, 0, 0],
+        [1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 0]
+      ],
+      // Blinker
+      [
+        [1, 1, 1]
+      ],
+      // Toad
+      [
+        [0, 1, 1, 1],
+        [1, 1, 1, 0]
+      ],
+      // Beacon
+      [
+        [1, 1, 0, 0],
+        [1, 1, 0, 0],
+        [0, 0, 1, 1],
+        [0, 0, 1, 1]
+      ],
+      // Pentadecathlon
+      [
+        [0, 1, 0],
+        [1, 1, 1],
+        [0, 1, 0],
+        [0, 1, 0],
+        [0, 1, 0],
+        [1, 1, 1],
+        [0, 1, 0]
+      ]
+    ];
+
+    // Initialize the grid
+    function initGrid() {
+      resizeCanvas();
+      grid = new Array(rows);
+      for (let y = 0; y < rows; y++) {
+        grid[y] = new Array(cols).fill(0);
+      }
+
+      // Place random moving patterns
+      for (let i = 0; i < 100; i++) {
+        placePattern(randomPattern(movingPatterns), randomPosition());
+      }
+    }
+
+    function randomPattern(patterns) {
+      return patterns[Math.floor(Math.random() * patterns.length)];
+    }
+
+    function randomPosition() {
+      const x = Math.floor(Math.random() * cols);
+      const y = Math.floor(Math.random() * rows);
+      return { x, y };
+    }
+
+    function placePattern(pattern, position) {
+      for (let y = 0; y < pattern.length; y++) {
+        for (let x = 0; x < pattern[0].length; x++) {
+          const gridX = (position.x + x) % cols;
+          const gridY = (position.y + y) % rows;
+          grid[gridY][gridX] = pattern[y][x];
+        }
+      }
+    }
+
+    // Draw the grid
+    function drawGrid() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'black';
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          if (grid[y][x] === 1) {
+            ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+          }
+        }
+      }
+    }
+
+    // Get number of alive neighbors
+    function countNeighbors(x, y) {
+      let count = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+            if (grid[ny][nx] === 1) {
+              count++;
+            }
+          }
+        }
+      }
+      return count;
+    }
+
+    // Update the grid
+    function updateGrid() {
+      const newGrid = new Array(rows);
+      for (let y = 0; y < rows; y++) {
+        newGrid[y] = new Array(cols);
+        for (let x = 0; x < cols; x++) {
+          const alive = grid[y][x] === 1;
+          const neighbors = countNeighbors(x, y);
+
+          if (alive) {
+            if (neighbors < 2 || neighbors > 3) {
+              newGrid[y][x] = 0;
+            } else {
+              newGrid[y][x] = 1;
+            }
+          } else {
+            if (neighbors === 3) {
+              newGrid[y][x] = 1;
+            } else {
+              newGrid[y][x] = 0;
+            }
+          }
+        }
+      }
+      grid = newGrid;
+    }
+
+    function gameLoop() {
+      if (generation < maxGenerations) {
+        updateGrid();
+        drawGrid();
+        generation++;
+      } else {
+        // Stop the simulation
+        clearInterval(animationInterval);
+        // Display 'CONGRATS' and start fireworks
+        displayMessage();
+        initFireworks();
+        animateFireworks();
+      }
+    }
+
+    function displayMessage() {
+      // Clear the grid
+      grid = new Array(rows);
+      for (let y = 0; y < rows; y++) {
+        grid[y] = new Array(cols).fill(0);
+      }
+
+      // Define the 'CONGRATS' pattern
+      // 5x7 font representation for each letter
+      const font = {
+        'A': [
+          "01110",
+          "10001",
+          "10001",
+          "11111",
+          "10001",
+          "10001",
+          "10001"
+        ],
+        'C': [
+          "01110",
+          "10001",
+          "10000",
+          "10000",
+          "10000",
+          "10001",
+          "01110"
+        ],
+        'G': [
+          "01110",
+          "10001",
+          "10000",
+          "10011",
+          "10001",
+          "10001",
+          "01110"
+        ],
+        'N': [
+          "10001",
+          "11001",
+          "10101",
+          "10011",
+          "10001",
+          "10001",
+          "10001"
+        ],
+        'O': [
+          "01110",
+          "10001",
+          "10001",
+          "10001",
+          "10001",
+          "10001",
+          "01110"
+        ],
+        'R': [
+          "11110",
+          "10001",
+          "10001",
+          "11110",
+          "10100",
+          "10010",
+          "10001"
+        ],
+        'S': [
+          "01110",
+          "10001",
+          "10000",
+          "01110",
+          "00001",
+          "10001",
+          "01110"
+        ],
+        'T': [
+          "11111",
+          "00100",
+          "00100",
+          "00100",
+          "00100",
+          "00100",
+          "00100"
+        ],
+        // Space for spacing between letters
+        ' ': [
+          "00000",
+          "00000",
+          "00000",
+          "00000",
+          "00000",
+          "00000",
+          "00000"
+        ]
+      };
+
+      const message = 'CONGRATS';
+      const letterSpacing = 2;
+      const lineHeight = 7;
+
+      // Calculate starting position to center the message
+      const totalMessageWidth = message.length * (5 + letterSpacing) - letterSpacing;
+      const startX = Math.floor((cols - totalMessageWidth) / 2);
+      const startY = Math.floor((rows - lineHeight) / 2);
+
+      for (let i = 0; i < message.length; i++) {
+        const char = message[i];
+        const pattern = font[char];
+        const posX = startX + i * (5 + letterSpacing);
+        const posY = startY;
+
+        // Place the character on the grid using live cells
+        for (let y = 0; y < pattern.length; y++) {
+          for (let x = 0; x < pattern[y].length; x++) {
+            if (pattern[y][x] === '1') {
+              if (posY + y < rows && posX + x < cols) {
+                grid[posY + y][posX + x] = 1;
+              }
+            }
+          }
+        }
+      }
+
+      drawGrid();
+    }
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      cols = Math.floor(canvas.width / cellSize);
+      rows = Math.floor(canvas.height / cellSize);
+    }
+
+    window.addEventListener('resize', () => {
+      clearInterval(animationInterval);
+      initGrid();
+      drawGrid();
+      generation = 0;
+      animationInterval = setInterval(gameLoop, interval);
+    });
+
+    // Fireworks implementation
+    function initFireworks() {
+      fireworks = [];
+      for (let i = 0; i < 10; i++) {
+        fireworks.push(new Firework());
+      }
+    }
+
+    function animateFireworks() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawGrid(); // Keep the 'CONGRATS' message displayed
+
+      fireworks.forEach((firework, index) => {
+        if (firework.exploded && firework.particles.length === 0) {
+          // Remove finished fireworks
+          fireworks.splice(index, 1);
+          fireworks.push(new Firework());
+        } else {
+          firework.update();
+          firework.draw();
+        }
+      });
+
+      requestAnimationFrame(animateFireworks);
+    }
+
+    function Firework() {
+      this.x = Math.random() * canvas.width;
+      this.y = canvas.height;
+      this.targetY = Math.random() * canvas.height / 2;
+      this.speed = 3 + Math.random() * 3;
+      this.color = 'hsl(' + Math.floor(Math.random() * 360) + ',100%,50%)';
+      this.exploded = false;
+      this.particles = [];
+
+      this.update = function () {
+        if (!this.exploded) {
+          this.y -= this.speed;
+          if (this.y <= this.targetY) {
+            this.exploded = true;
+            this.createParticles();
+          }
+        } else {
+          this.particles.forEach((particle, index) => {
+            particle.update();
+            if (particle.alpha <= 0) {
+              this.particles.splice(index, 1);
+            }
+          });
+        }
+      };
+
+      this.draw = function () {
+        if (!this.exploded) {
+          ctx.fillStyle = this.color;
+          ctx.fillRect(this.x, this.y, 2, 5);
+        } else {
+          this.particles.forEach(particle => {
+            particle.draw();
+          });
+        }
+      };
+
+      this.createParticles = function () {
+        for (let i = 0; i < 30; i++) {
+          this.particles.push(new Particle(this.x, this.y, this.color));
+        }
+      };
+    }
+
+    function Particle(x, y, color) {
+      this.x = x;
+      this.y = y;
+      this.speed = Math.random() * 5 + 1;
+      this.angle = Math.random() * Math.PI * 2;
+      this.gravity = 0.05;
+      this.alpha = 1;
+      this.decay = Math.random() * 0.01 + 0.005;
+      this.color = color;
+
+      this.update = function () {
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed + this.gravity;
+        this.alpha -= this.decay;
+      };
+
+      this.draw = function () {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, 3, 3);
+        ctx.restore();
+      };
+    }
+
+    // Start the simulation
+    initGrid();
+    drawGrid();
+    animationInterval = setInterval(gameLoop, interval);
+  </script>
+</body>
+
+</html>
